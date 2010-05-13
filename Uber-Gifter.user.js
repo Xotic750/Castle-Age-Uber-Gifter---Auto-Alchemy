@@ -191,10 +191,9 @@ function check_update(num, currentVersion) {
 
 function put_link() {
     var loc = $("#app46755028429_nvbar_nvl").find(".nvbar_middle:first");
-    if (loc.length && !$("#uber_gift").length) {
-        var html_start = '<div class="nvbar_start"></div>';
-        var html_end = '<div class="nvbar_end"></div>';
-        var html_gift = '<div>' + html_start + '<div class="nvbar_middle"><a id="uber_gift" href="javascript:;"><span class="hover_header">Gift</span></a></div>' + html_end + '</div>';
+    if (loc.length && !$("#uber_gifter").length) {
+        var html_start = '<div id="uber_gifter" class="nvbar_start"></div>';
+        var html_gift = '<div><div class="nvbar_start"></div><div class="nvbar_middle"><a id="uber_gift" href="javascript:;"><span class="hover_header">Gift</span></a></div><div class="nvbar_end"></div></div>';
         var html_alchemy = '<a id="uber_alchemy" href="javascript:;"><span class="hover_header">Alchemy</span></a>';
         $(loc).removeAttr("style");
         $(html_start).css({}).prependTo(loc.parent());
