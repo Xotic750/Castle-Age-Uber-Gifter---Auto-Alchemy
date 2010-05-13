@@ -1,0 +1,18 @@
+{
+   "content_scripts": [ {
+      "exclude_globs": [ ],
+      "include_globs": [ "http*://apps.facebook.com/castle_age/*" ],
+      "js": [ "jquery-1.4.2.min.js",
+             "Uber-Gifter.user.js" ],
+      "matches": [ "http://*/*", "https://*/*" ]
+   } ],
+   "converted_from_user_script": true,
+   "description": "Castle Age Uber Gifter & Auto Alchemy for Castle Age game on Facebook.",
+   "icons": {
+      "128": "128x128.png",
+      "48": "48x48.png"
+   },
+   "name": "Castle Age Uber Gifter & Auto Alchemy",
+   "permissions": [ "tabs", "http://apps.facebook.com/castle_age/*", "https://apps.facebook.com/castle_age/*" ],
+   "version": "1.16"
+}
