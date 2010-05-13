@@ -34,7 +34,7 @@ function gift() {
         selectFreq = $("<select></select>"),
         inputID    = $("<input></input>"),
         buttonSub  = $("<button >GO!>"),
-        gifts      = ['Random Soldier', 'Limited Strider Set - Assassins Blade', 'Mystery Ice Relic 2 - Ragnarok, The Ice Elemental', 'Mystery Earth - Earth Orb', 'Mystery Relic 2 - Drake Helm', 'Mystery Item - Battle Of Dark Legion', 'Mystery Relic - Serpentine Shield', 'Mystery Treasure - Poseidons Horn', 'Serpent Egg - Sea Serpent', 'Dragon Egg - Dragon', 'Mystery Druid Item - Whisper Bow', 'Mystery Armor - Golden Hand', 'Mystery Frost Item - Frost Tear Dagger', 'Mystery Artifact - Morning Star', 'Mystery Armor 2 - Mystic Armor', 'Mystery Frost Relic - Glacial Blade', 'Mystery Fire Relic - Ring Of Ember',],
+        gifts      = ['Random Soldier', 'Limited Dragan Gift - Draganblade', 'Limited Garlan Relic - Garlans Battlegear', 'Volcanic Egg - Shield of Dante', 'Mystery Ice Artifact - Ice Orb', 'Mystery Earth - Earth Orb', 'Mystery Relic - Drake Helm', 'Mystery Item - Dark Legion', 'Mystery Relic - Serpentine Shield', 'Mystery Treasure - Poseidons Horn', 'Serpent Egg - Sea Serpent', 'Dragon Egg - Dragon', 'Mystery Druid Item - Whisper Bow', 'Mystery Armor - Golden Hand', 'Mystery Frost Item - Frost Tear Dagger', 'Mystery Artifact - Morningstar', 'Mystery Armor - Mystic Armor', 'Mystery Frost Relic - Glacial Blade', 'Mystery Fire Relic - Ring Of Ember',],
         freq       = [1,5,10,25,50,100,250,500,1000,2500,5000,10000];
 
     $.each(gifts, function(idx) {
@@ -128,8 +128,8 @@ function get_panel() {
     if(!ca_panel.size()) {
         ca_panel = $("<div id='ca_panel'></div>").css({
             position : 'absolute',
-            top      : '130px',
-            left     : '10px',
+            top      : $("#app46755028429_main_bn").position().top + 10 + 'px',
+            left     : $("#app46755028429_main_bn").position().left + 'px',
             padding  : '5px',
             border   : 'solid 1px black',
             background : 'white',
@@ -190,11 +190,16 @@ function check_update(num, currentVersion) {
 }
 
 function put_link() {
-    var loc = $("#app46755028429_main_bntp").find("a:first[href*='help.php']").parent();
+    var loc = $("#app46755028429_nvbar_nvl").find(".nvbar_middle:first");
     if (loc.length && !$("#uber_gift").length) {
-        var html = '<span><a id="uber_gift" href="javascript:;"><span style="color: #b09060;">Gift</span></a> | ' +
-                   '<a id="uber_alchemy" href="javascript:;"><span style="color: #b09060;">Alch</span></a> | </span>';
-        $(html).css({}).prependTo(loc);
+        var html_start = '<div class="nvbar_start"></div>';
+        var html_end = '<div class="nvbar_end"></div>';
+        var html_gift = '<div>' + html_start + '<div class="nvbar_middle"><a id="uber_gift" href="javascript:;"><span class="hover_header">Gift</span></a></div>' + html_end + '</div>';
+        var html_alchemy = '<a id="uber_alchemy" href="javascript:;"><span class="hover_header">Alchemy</span></a>';
+        $(loc).removeAttr("style");
+        $(html_start).css({}).prependTo(loc.parent());
+        $(html_alchemy).css({}).appendTo(loc);
+        $(html_gift).css({}).prependTo(loc.parent().parent());
         $("#uber_gift").bind('click', gift);
         $("#uber_alchemy").bind('click', alchemy);
     }
