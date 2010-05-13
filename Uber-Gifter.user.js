@@ -191,7 +191,7 @@ function check_update(num, currentVersion) {
 
 function put_link() {
     var loc = $("#app46755028429_main_bntp").find("a:first[href*='help.php']").parent();
-    if (loc.length) {
+    if (loc.length && !$("#uber_gift").length) {
         var html = '<span><a id="uber_gift" href="javascript:;"><span style="color: #b09060;">Gift</span></a> | ' +
                    '<a id="uber_alchemy" href="javascript:;"><span style="color: #b09060;">Alch</span></a> | </span>';
         $(html).css({}).prependTo(loc);
@@ -206,4 +206,8 @@ function put_link() {
 $(document).ready(function() {
     //check_update(65227, '1.16', true);
     put_link();
+    var globalCont = $("#app46755028429_globalContainer");
+    if (globalCont.length) {
+        globalCont.bind('DOMNodeInserted', put_link);
+    }
 });
