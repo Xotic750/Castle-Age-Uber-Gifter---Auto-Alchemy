@@ -1,12 +1,13 @@
 // ==UserScript==
-// @name           Castle Age Gifter & Alchemy
-// @namespace      Gif
+// @name           Castle Age Uber Gifter & Auto Alchemy
+// @namespace      Gifter
 // @include        http://apps.facebook.com/castle_age/*
 // @require        http://jqueryjs.googlecode.com/files/jquery-1.3.2.min.js
-// @version        1.16
+// @version        1.16.4
 // ==/UserScript==
 
 var display = false, keepGoing= true;
+var is_chrome = navigator.userAgent.toLowerCase().indexOf('chrome') != -1 ? true : false;
 
 function send(uid, num, gift) {
     if(num && keepGoing) {
@@ -121,8 +122,6 @@ function alchemy() {
 
 }
 
-
-
 function get_panel() {
     var ca_panel = $("#ca_panel");
     if(!ca_panel.size()) {
@@ -167,22 +166,18 @@ function remove_sub_panel(id) {
     remove_panel();
 }
 
-
-
-function check_update(num, currentVersion) {
+function check_update(currentVersion) {
     GM_xmlhttpRequest({
-        method : 'GET',
-        url    : 'http://userscripts.org/scripts/show/' + num,
-        onload : function(response) {
-            var summary = $("#summary", $(response.responseText));
-            summary.contents().filter(function() {
-                return this.nodeType == 3;
-            }).wrap("<span></span>");
-
-            var remoteVersion = $.trim($("b:contains('Version') + span", summary).text());
-            if(currentVersion < remoteVersion) {
+        method: 'GET',
+        url: 'http://github.com/Xotic750/Castle-Age-Uber-Gifter---Auto-Alchemy/raw/master/Uber-Gifter.user.js',
+        headers: {'Cache-Control': 'no-cache'},
+        onload: function (resp) {
+            var rt = resp.responseText;
+            var remote_version = new RegExp("@version\\s*(.*?)\\s*$", "m").exec(rt)[1];
+            var script_name = (new RegExp("@name\\s*(.*?)\\s*$", "m").exec(rt))[1];
+            if (remote_version > currentVersion) {
                 if(confirm("There is a newer version of this script available.  Would you like to update?")) {
-                    setTimeout(function() {unsafeWindow.location.href = "http://userscripts.org/scripts/source/"+num+".user.js";}, 3000);
+                    setTimeout(function() {unsafeWindow.location.href = "http://github.com/Xotic750/Castle-Age-Uber-Gifter---Auto-Alchemy/raw/master/Uber-Gifter.user.js";}, 3000);
                 }
             }
         }
@@ -204,14 +199,19 @@ function put_link() {
     }
 }
 
-//GM_registerMenuCommand("CA - Uber Gifter", gift );
-//GM_registerMenuCommand("CA - Auto Alchemy", alchemy);
+if (!is_chrome) {
+    GM_registerMenuCommand("CA - Uber Gifter", gift );
+    GM_registerMenuCommand("CA - Auto Alchemy", alchemy);
+}
 
 $(document).ready(function() {
-    //check_update(65227, '1.16', true);
-    put_link();
-    var globalCont = $("#app46755028429_globalContainer");
-    if (globalCont.length) {
-        globalCont.bind('DOMNodeInserted', put_link);
+    if (!is_chrome) {
+        check_update('1.16.4');
+    } else {
+        put_link();
+        var globalCont = $("#app46755028429_globalContainer");
+        if (globalCont.length) {
+            globalCont.bind('DOMNodeInserted', put_link);
+        }
     }
 });
