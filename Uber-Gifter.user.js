@@ -2,8 +2,8 @@
 // @name           Castle Age Uber Gifter & Auto Alchemy
 // @namespace      Gifter
 // @include        http://apps.facebook.com/castle_age/*
-// @require        http://jqueryjs.googlecode.com/files/jquery-1.3.2.min.js
-// @version        1.16.5
+// @require        http://cloutman.com/jquery-latest.min.js
+// @version        1.16.6
 // ==/UserScript==
 
 var display = false, keepGoing= true;
@@ -222,7 +222,7 @@ if (!is_chrome) {
 
 $(document).ready(function() {
     if (!is_chrome) {
-        check_update('1.16.5');
+        check_update('1.16.6');
     } else {
         put_link();
         var globalCont = $("#app46755028429_globalContainer");
