@@ -3,7 +3,7 @@
 // @namespace      Gifter
 // @include        http://apps.facebook.com/castle_age/*
 // @require        http://jqueryjs.googlecode.com/files/jquery-1.3.2.min.js
-// @version        1.16.4
+// @version        1.16.5
 // ==/UserScript==
 
 var display = false, keepGoing= true;
@@ -35,8 +35,24 @@ function gift() {
         selectFreq = $("<select></select>"),
         inputID    = $("<input></input>"),
         buttonSub  = $("<button >GO!>"),
-        gifts      = ['Random Soldier', 'Limited Dragan Gift - Draganblade', 'Limited Garlan Relic - Garlans Battlegear', 'Volcanic Egg - Shield of Dante', 'Mystery Ice Artifact - Ice Orb', 'Mystery Earth - Earth Orb', 'Mystery Relic - Drake Helm', 'Mystery Item - Dark Legion', 'Mystery Relic - Serpentine Shield', 'Mystery Treasure - Poseidons Horn', 'Serpent Egg - Sea Serpent', 'Dragon Egg - Dragon', 'Mystery Druid Item - Whisper Bow', 'Mystery Armor - Golden Hand', 'Mystery Frost Item - Frost Tear Dagger', 'Mystery Artifact - Morningstar', 'Mystery Armor - Mystic Armor', 'Mystery Frost Relic - Glacial Blade', 'Mystery Fire Relic - Ring Of Ember',],
+        gifts      = ['Random Soldier'],
         freq       = [1,5,10,25,50,100,250,500,1000,2500,5000,10000];
+
+    $.ajax({
+        url: 'http://apps.facebook.com/castle_age/gift.php',
+        async: false,
+        error:
+            function (XMLHttpRequest, textStatus, errorThrown) {
+                alert("Unable to get gift list: " + textStatus);
+            },
+        success:
+            function (data, textStatus, XMLHttpRequest) {
+                var friendList = [];
+                $(data).find('#app46755028429_giftContainer').find('div[id*="app46755028429_gift"]').each(function (index) {
+                    gifts.push($(this).children().eq(0).html());
+                });
+            }
+    });
 
     $.each(gifts, function(idx) {
         selectGift.append("<option value='" + idx + "'>" + this + "</option");
@@ -206,7 +222,7 @@ if (!is_chrome) {
 
 $(document).ready(function() {
     if (!is_chrome) {
-        check_update('1.16.4');
+        check_update('1.16.5');
     } else {
         put_link();
         var globalCont = $("#app46755028429_globalContainer");
