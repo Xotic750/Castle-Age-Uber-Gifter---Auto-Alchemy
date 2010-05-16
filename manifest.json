@@ -1,6 +1,6 @@
 {
    "content_scripts": [ {
-      "exclude_globs": [ ],
+      "exclude_globs": [ "*#iframe*" ],
       "include_globs": [ "http*://apps.facebook.com/castle_age/*" ],
       "js": [ "jquery-1.4.2.min.js",
              "Uber-Gifter.user.js" ],
@@ -14,5 +14,5 @@
    },
    "name": "Castle Age Uber Gifter & Auto Alchemy",
    "permissions": [ "tabs", "http://apps.facebook.com/castle_age/*", "https://apps.facebook.com/castle_age/*" ],
-   "version": "1.16.6"
+   "version": "1.17.0"
 }

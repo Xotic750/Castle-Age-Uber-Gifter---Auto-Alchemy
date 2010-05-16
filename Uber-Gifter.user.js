@@ -2,232 +2,306 @@
 // @name           Castle Age Uber Gifter & Auto Alchemy
 // @namespace      Gifter
 // @include        http://apps.facebook.com/castle_age/*
-// @require        http://cloutman.com/jquery-latest.min.js
-// @version        1.16.6
+// @exclude        *#iframe*
+// @require        http://jqueryjs.googlecode.com/files/jquery-1.3.2.min.js
+// @version        1.17.0
+// @license        GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
+// @compatability  Firefox 3.0+, Chrome 4+, Flock 2.0+
 // ==/UserScript==
 
-var display = false, keepGoing= true;
-var is_chrome = navigator.userAgent.toLowerCase().indexOf('chrome') != -1 ? true : false;
+/*jslint white: true, browser: true, devel: true, undef: true, nomen: true, bitwise: true, immed: true, regexp: true */
+/*global $,GM_xmlhttpRequest,unsafeWindow,GM_registerMenuCommand */
 
-function send(uid, num, gift) {
-    if(num && keepGoing) {
-        $.post("http://apps.facebook.com/castle_age/army.php?act=create&gift=" + gift, {'ids[]': uid}, function() {
-            receive(uid, num, gift);
-        });
-    } else if(!num) {
-        alert('All gifts have been delivered!!!');
-        remove_sub_panel('ca_gift');
-    }
-}
+var Uber = {
+    version: '1.17.0',
 
-function receive(uid, num, gift) {
-    if(num--)
-        $.get("http://apps.facebook.com/castle_age/army.php?act=acpt&rqtp=gift&uid=" + uid, function() {
-            if(display)
-                get_sub_panel('ca_gift').text(num + " gifts waiting for delivery...");
-            send(uid, num, gift);
-        });
-}
+    display: false,
 
-function gift() {
-    var ca_gift = get_sub_panel('ca_gift'),
-        selectGift = $("<select></select>"),
-        selectFreq = $("<select></select>"),
-        inputID    = $("<input></input>"),
-        buttonSub  = $("<button >GO!>"),
-        gifts      = ['Random Soldier'],
-        freq       = [1,5,10,25,50,100,250,500,1000,2500,5000,10000];
+    keepGoing: true,
 
-    $.ajax({
-        url: 'http://apps.facebook.com/castle_age/gift.php',
-        async: false,
-        error:
-            function (XMLHttpRequest, textStatus, errorThrown) {
-                alert("Unable to get gift list: " + textStatus);
-            },
-        success:
-            function (data, textStatus, XMLHttpRequest) {
-                var friendList = [];
-                $(data).find('#app46755028429_giftContainer').find('div[id*="app46755028429_gift"]').each(function (index) {
-                    gifts.push($(this).children().eq(0).html());
-                });
-            }
-    });
+    send: function (uid, num, gift) {
+        if (num && this.keepGoing) {
+            $.post("http://apps.facebook.com/castle_age/army.php?act=create&gift=" + gift, {'ids[]': uid}, function () {
+                Uber.receive(uid, num, gift);
+            });
+        } else if (!num) {
+            this.alert('All gifts have been delivered!!!');
+            this.remove_sub_panel('ca_gift');
+        }
+    },
 
-    $.each(gifts, function(idx) {
-        selectGift.append("<option value='" + idx + "'>" + this + "</option");
-    });
+    receive: function (uid, num, gift) {
+        if (num--) {
+            $.get("http://apps.facebook.com/castle_age/army.php?act=acpt&rqtp=gift&uid=" + uid, function () {
+                if (Uber.display) {
+                    Uber.get_sub_panel('ca_gift').text(num + " gifts waiting for delivery...");
+                }
 
-    $.each(freq, function() {
-         selectFreq.append("<option value='"+this+"'>"+this+"</option>");
-    });
+                Uber.send(uid, num, gift);
+            });
+        }
+    },
 
-    buttonSub.click(function() {
-        $("<div></div>").load("party.php span.linkwhite a", function() {
-            if(/id=(\d+)/.test($(this).children().attr("href"))) {
-                send(RegExp.$1, selectFreq.val(), $(":selected", selectGift).attr("value"));
-                ca_gift.html("Preparing gifts...");
-                display = true;
-            } else {
-                alert("Cannot find your user ID.  CA servers are possibly busy.  Please try again later.");
-                remove_sub_panel('ca_gift');
-            }
-        });
-    });
-
-    ca_gift.html("Select gift and amount...<br/>");
-    ca_gift.append(selectGift, selectFreq, buttonSub);
-
-}
-
-function do_alch(form, num) {
-    if(num > 0 && form.size()) {
-        var data = {}, id = form.attr("id");
-
-        form.children("input").each(function() {
-            data[this.name] = this.value;
-        });
-
-        if(display)
-            get_sub_panel('ca_alch').text(num + " items remaining...");
-
-        $("<div></div>").load("alchemy.php div.results span.result_body, #"+id, data, function(responseText, textStatus, XMLHttpRequest) {
-            var result = $(this), txt = $.trim(result.text());
-
-            if(/You have created/.test(txt)) {
-                setTimeout( function() {do_alch(result.children("form"), --num);}, 3000);
-            } else if(txt == '') {
-                setTimeout( function() {do_alch(form, num);}, 3000);
-            } else {
-                alert('All items could not be combined.  You do not have sufficient materials to combine ' +num+ ' itmes.');
-                remove_sub_panel('ca_alch');
-            }
-        });
-    } else {
-        alert('All items have been combined.');
-        remove_sub_panel('ca_alch');
-    }
-}
-
-function alchemy() {
-    var ca_alch = get_sub_panel('ca_alch'), divs = $("<div></div>");
-
-    divs.load("alchemy.php div.statsT2 table div.alchemyRecipeBack", function(responseText, textStatus, XMLHttpRequest) {
-        var selectReci = $("<select></select>"),
+    gift: function () {
+        var ca_gift = Uber.get_sub_panel('ca_gift'),
+            selectGift = $("<select></select>"),
             selectFreq = $("<select></select>"),
-            buttonSub  = $("<button>Combine</button>"),
-            freq       = [1,2,3,4,5,10,20,50,100,200,500]
-            ;
+            inputID    = $("<input></input>"),
+            buttonSub  = $("<button >GO!>"),
+            gifts      = ['Random Soldier'],
+            freq       = [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
 
-        divs.children().each(function(idx) {
-            selectReci.append("<option value='"+$("form",$(this)).attr("id")+"'>"+$("div.recipeTitle", $(this)).text().replace(/RECIPES: Create | to join your army!/g,'')+"</option>");
+        $.ajax({
+            url: 'http://apps.facebook.com/castle_age/gift.php',
+            async: false,
+            error:
+                function (XMLHttpRequest, textStatus, errorThrown) {
+                    Uber.alert("Unable to get gift list: " + textStatus);
+                },
+            success:
+                function (data, textStatus, XMLHttpRequest) {
+                    data = data.split('<div style="clear: both;"></div>');
+                    var j = -1;
+                    for (var i = 0; i < data.length; i++) {
+                        if (/app46755028429_gift1/.test(data[i])) {
+                            j = i;
+                            break;
+                        }
+                    }
+
+                    if (j === -1) {
+                        Uber.alert("Could not find gift list");
+                    } else {
+                        $('<div></div>').html(data[j]).find('div[id^="app46755028429_gift"]').each(function (index) {
+                            var giftName = $.trim($(this).children().eq(0).html()).replace(/!/i, '');
+                            if (gifts.indexOf(giftName) >= 0) {
+                                giftName += ' #2';
+                            }
+
+                            gifts.push(giftName);
+                        });
+                    }
+                }
         });
 
-        $.each(freq, function() {
-             selectFreq.append("<option value='"+this+"'>"+this+"</option>");
+        $.each(gifts, function (idx) {
+            selectGift.append("<option value='" + idx + "'>" + this + "</option");
         });
 
-        buttonSub.click(function() {
-            do_alch($("#"+$(":selected", selectReci).attr("value"), divs), selectFreq.val());
-            ca_alch.html("Preparing to combine items...You will be notified upon completion.");
-            display = true;
+        $.each(freq, function () {
+            selectFreq.append("<option value='" + this + "'>" + this + "</option>");
         });
-        ca_alch.html("Choose your item and quantity from the menu.<br/>");
-        ca_alch.append(selectReci, selectFreq, buttonSub);
-    });
 
-}
-
-function get_panel() {
-    var ca_panel = $("#ca_panel");
-    if(!ca_panel.size()) {
-        ca_panel = $("<div id='ca_panel'></div>").css({
-            position : 'absolute',
-            top      : $("#app46755028429_main_bn").position().top + 10 + 'px',
-            left     : $("#app46755028429_main_bn").position().left + 'px',
-            padding  : '5px',
-            border   : 'solid 1px black',
-            background : 'white',
-            zIndex: '4'
+        buttonSub.click(function () {
+            $("<div></div>").load("party.php span.linkwhite a", function () {
+                if (/id=(\d+)/.test($(this).children().attr("href"))) {
+                    Uber.send(RegExp.$1, selectFreq.val(), $(":selected", selectGift).attr("value"));
+                    ca_gift.html("Preparing gifts...");
+                    Uber.display = true;
+                } else {
+                    Uber.alert("Cannot find your user ID.  CA servers are possibly busy.  Please try again later.");
+                    Uber.remove_sub_panel('ca_gift');
+                }
+            });
         });
-        ca_panel.appendTo("#app_content_46755028429");
-    }
-    return ca_panel;
-}
 
-function remove_panel() {
-    var ca_panel = get_panel();
-    if(!ca_panel.children().size())
-        ca_panel.remove();
-}
+        ca_gift.html("Select gift and amount...<br/>");
+        ca_gift.append(selectGift, selectFreq, buttonSub);
 
-function get_sub_panel(id) {
-    var ca_sub_panel = $("#" + id);
-    if(!ca_sub_panel.size()) {
-        ca_sub_panel = $("<div id='"+id+"'>loading...please wait~</div>").css({
-            height   : '60px',
-            width    : '300px',
-            padding  : '5px',
-            border   : 'solid 1px black',
-            background : 'white'
+    },
+
+    do_alch: function (form, num) {
+        if (num > 0 && form.size()) {
+            var data = {},
+                id = form.attr("id");
+
+            form.children("input").each(function () {
+                data[this.name] = this.value;
+            });
+
+            if (this.display) {
+                this.get_sub_panel('ca_alch').text(num + " items remaining...");
+            }
+
+            $("<div></div>").load("alchemy.php div.results span.result_body, #" + id, data, function (responseText, textStatus, XMLHttpRequest) {
+                var result = $(this), txt = $.trim(result.text());
+
+                if (/You have created/.test(txt)) {
+                    setTimeout(function () {
+                        Uber.do_alch(result.children("form"), --num);
+                    }, 3000);
+                } else if (txt === '') {
+                    setTimeout(function () {
+                        Uber.do_alch(form, num);
+                    }, 3000);
+                } else {
+                    Uber.alert('All items could not be combined.  You do not have sufficient materials to combine ' + num + ' itmes.');
+                    Uber.remove_sub_panel('ca_alch');
+                }
+            });
+        } else {
+            this.alert('All items have been combined.');
+            this.remove_sub_panel('ca_alch');
+        }
+    },
+
+    alchemy: function () {
+        var ca_alch = Uber.get_sub_panel('ca_alch'),
+            divs = $("<div></div>");
+
+        divs.load("alchemy.php div.statsT2 table div.alchemyRecipeBack", function (responseText, textStatus, XMLHttpRequest) {
+            var selectReci = $("<select></select>"),
+                selectFreq = $("<select></select>"),
+                buttonSub  = $("<button>Combine</button>"),
+                freq       = [1, 2, 3, 4, 5, 10, 20, 50, 100, 200, 500];
+
+            divs.children().each(function (idx) {
+                selectReci.append("<option value='" + $("form", $(this)).attr("id") + "'>" + $("div.recipeTitle", $(this)).text().replace(/RECIPES: Create | to join your army!/g, '') + "</option>");
+            });
+
+            $.each(freq, function () {
+                selectFreq.append("<option value='" + this + "'>" + this + "</option>");
+            });
+
+            buttonSub.click(function () {
+                Uber.do_alch($("#" + $(":selected", selectReci).attr("value"), divs), selectFreq.val());
+                ca_alch.html("Preparing to combine items...You will be notified upon completion.");
+                Uber.display = true;
+            });
+
+            ca_alch.html("Choose your item and quantity from the menu.<br/>");
+            ca_alch.append(selectReci, selectFreq, buttonSub);
         });
-        get_panel().append(ca_sub_panel);
-    }
-    return ca_sub_panel;
-}
+    },
 
-function remove_sub_panel(id) {
-    var ca_sub_panel = get_sub_panel(id);
-    ca_sub_panel.remove();
-    remove_panel();
-}
+    get_panel: function () {
+        var ca_panel = $("#ca_panel");
+        if (!ca_panel.size()) {
+            ca_panel = $("<div id='ca_panel'></div>").css({
+                position : 'absolute',
+                top      : $("#app46755028429_main_bn").offset().top + 10 + 'px',
+                left     : $("#app46755028429_main_bn").offset().left + 'px',
+                padding  : '5px',
+                border   : 'solid 1px black',
+                background : 'white',
+                zIndex: '4'
+            });
 
-function check_update(currentVersion) {
-    GM_xmlhttpRequest({
-        method: 'GET',
-        url: 'http://github.com/Xotic750/Castle-Age-Uber-Gifter---Auto-Alchemy/raw/master/Uber-Gifter.user.js',
-        headers: {'Cache-Control': 'no-cache'},
-        onload: function (resp) {
-            var rt = resp.responseText;
-            var remote_version = new RegExp("@version\\s*(.*?)\\s*$", "m").exec(rt)[1];
-            var script_name = (new RegExp("@name\\s*(.*?)\\s*$", "m").exec(rt))[1];
-            if (remote_version > currentVersion) {
-                if(confirm("There is a newer version of this script available.  Would you like to update?")) {
-                    setTimeout(function() {unsafeWindow.location.href = "http://github.com/Xotic750/Castle-Age-Uber-Gifter---Auto-Alchemy/raw/master/Uber-Gifter.user.js";}, 3000);
+            ca_panel.appendTo(document.body);
+        }
+
+        return ca_panel;
+    },
+
+    remove_panel: function () {
+        var ca_panel = this.get_panel();
+        if (!ca_panel.children().size()) {
+            ca_panel.remove();
+        }
+    },
+
+    get_sub_panel: function (id) {
+        var ca_sub_panel = $("#" + id);
+        if (!ca_sub_panel.size()) {
+            ca_sub_panel = $("<div id='" + id + "'>loading...please wait~</div>").css({
+                height   : '60px',
+                width    : '300px',
+                padding  : '5px',
+                border   : 'solid 1px black',
+                background : 'white'
+            });
+
+            this.get_panel().append(ca_sub_panel);
+        }
+
+        return ca_sub_panel;
+    },
+
+    remove_sub_panel: function (id) {
+        var ca_sub_panel = this.get_sub_panel(id);
+        ca_sub_panel.remove();
+        this.remove_panel();
+    },
+
+    check_update: function (currentVersion) {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: 'http://github.com/Xotic750/Castle-Age-Uber-Gifter---Auto-Alchemy/raw/master/Uber-Gifter.user.js',
+            headers: {'Cache-Control': 'no-cache'},
+            onload: function (resp) {
+                var rt = resp.responseText,
+                    remote_version = new RegExp("@version\\s*(.*?)\\s*$", "m").exec(rt)[1],
+                    script_name = (new RegExp("@name\\s*(.*?)\\s*$", "m").exec(rt))[1];
+                if (remote_version > currentVersion) {
+                    if (confirm("There is a newer version of this script available.  Would you like to update?")) {
+                        setTimeout(function () {
+                            unsafeWindow.location.href = "http://github.com/Xotic750/Castle-Age-Uber-Gifter---Auto-Alchemy/raw/master/Uber-Gifter.user.js";
+                        }, 3000);
+                    }
                 }
             }
+        });
+    },
+
+    put_link: function () {
+        var loc = $("#app46755028429_nvbar_nvl").find(".nvbar_middle:first");
+        if (loc.length && !$("#uber_gifter").length) {
+            var html_start = '<div id="uber_gifter" class="nvbar_start"></div>',
+                html_gift = '<div><div class="nvbar_start"></div><div class="nvbar_middle"><a id="uber_gift" href="javascript:;"><span class="hover_header">Gift</span></a></div><div class="nvbar_end"></div></div>',
+                html_alchemy = '<a id="uber_alchemy" href="javascript:;"><span class="hover_header">Alchemy</span></a>';
+            $(loc).removeAttr("style");
+            $(html_start).css({}).prependTo(loc.parent());
+            $(html_alchemy).css({}).appendTo(loc);
+            $(html_gift).css({}).prependTo(loc.parent().parent());
+            $("#uber_gift").bind('click', Uber.gift);
+            $("#uber_alchemy").bind('click', Uber.alchemy);
         }
-    });
-}
+    },
 
-function put_link() {
-    var loc = $("#app46755028429_nvbar_nvl").find(".nvbar_middle:first");
-    if (loc.length && !$("#uber_gifter").length) {
-        var html_start = '<div id="uber_gifter" class="nvbar_start"></div>';
-        var html_gift = '<div><div class="nvbar_start"></div><div class="nvbar_middle"><a id="uber_gift" href="javascript:;"><span class="hover_header">Gift</span></a></div><div class="nvbar_end"></div></div>';
-        var html_alchemy = '<a id="uber_alchemy" href="javascript:;"><span class="hover_header">Alchemy</span></a>';
-        $(loc).removeAttr("style");
-        $(html_start).css({}).prependTo(loc.parent());
-        $(html_alchemy).css({}).appendTo(loc);
-        $(html_gift).css({}).prependTo(loc.parent().parent());
-        $("#uber_gift").bind('click', gift);
-        $("#uber_alchemy").bind('click', alchemy);
-    }
-}
+    alert: function (message) {
+        var alert_panel = $("#uber_alert_panel");
+        if (!alert_panel.size()) {
+            alert_panel = $("<div id='uber_alert_panel'><br />" + message +
+                            "<br /><br /><br /><div><button id='uber_alert_ok'>ok</button></div></div>").css({
+                position   : 'fixed',
+                top        : (window.innerHeight / 2) + 'px',
+                left       : $("#app46755028429_main_bn").offset().left + 300 + 'px',
+                height     : '100px',
+                width      : '300px',
+                padding    : '5px',
+                border     : 'solid 1px black',
+                background : 'white',
+                textAlign  : 'center',
+                zIndex     : '5'
+            });
 
-if (!is_chrome) {
-    GM_registerMenuCommand("CA - Uber Gifter", gift );
-    GM_registerMenuCommand("CA - Auto Alchemy", alchemy);
-}
+            alert_panel.appendTo(document.body);
 
-$(document).ready(function() {
-    if (!is_chrome) {
-        check_update('1.16.6');
-    } else {
-        put_link();
+            $("#uber_alert_ok").click(function () {
+                $("#uber_alert_panel").remove()
+            });
+        }
+    },
+
+    init_chrome: function () {
+        this.put_link();
         var globalCont = $("#app46755028429_globalContainer");
         if (globalCont.length) {
-            globalCont.bind('DOMNodeInserted', put_link);
+            globalCont.bind('DOMNodeInserted', this.put_link);
         }
+    },
+
+    init_firefox: function () {
+        this.check_update(this.version);
+        GM_registerMenuCommand("CA - Uber Gifter", this.gift);
+        GM_registerMenuCommand("CA - Auto Alchemy", this.alchemy);
+    }
+};
+
+$(function () {
+    if (navigator.userAgent.toLowerCase().indexOf('chrome') !== -1 ? true : false) {
+        Uber.init_chrome();
+    } else {
+        Uber.init_firefox();
     }
 });
