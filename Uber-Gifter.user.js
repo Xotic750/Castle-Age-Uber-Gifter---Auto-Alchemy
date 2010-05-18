@@ -4,7 +4,7 @@
 // @include        http://apps.facebook.com/castle_age/*
 // @exclude        *#iframe*
 // @require        http://jqueryjs.googlecode.com/files/jquery-1.3.2.min.js
-// @version        1.17.0
+// @version        1.17.1
 // @license        GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @compatability  Firefox 3.0+, Chrome 4+, Flock 2.0+
 // ==/UserScript==
@@ -13,7 +13,7 @@
 /*global $,GM_xmlhttpRequest,unsafeWindow,GM_registerMenuCommand */
 
 var Uber = {
-    version: '1.17.0',
+    version: '1.17.1',
 
     display: false,
 
@@ -21,7 +21,7 @@ var Uber = {
 
     send: function (uid, num, gift) {
         if (num && this.keepGoing) {
-            $.post("http://apps.facebook.com/castle_age/army.php?act=create&gift=" + gift, {'ids[]': uid}, function () {
+            $.post("http://apps.facebook.com/castle_age/gift_accept.php?act=create&gift=" + gift, {'ids[]': uid}, function() {
                 Uber.receive(uid, num, gift);
             });
         } else if (!num) {
@@ -32,7 +32,7 @@ var Uber = {
 
     receive: function (uid, num, gift) {
         if (num--) {
-            $.get("http://apps.facebook.com/castle_age/army.php?act=acpt&rqtp=gift&uid=" + uid, function () {
+            $.get("http://apps.facebook.com/castle_age/gift_accept.php?act=acpt&rqtp=gift&uid=" + uid, function() {
                 if (Uber.display) {
                     Uber.get_sub_panel('ca_gift').text(num + " gifts waiting for delivery...");
                 }
@@ -247,8 +247,11 @@ var Uber = {
         var loc = $("#app46755028429_nvbar_nvl").find(".nvbar_middle:first");
         if (loc.length && !$("#uber_gifter").length) {
             var html_start = '<div id="uber_gifter" class="nvbar_start"></div>',
-                html_gift = '<div><div class="nvbar_start"></div><div class="nvbar_middle"><a id="uber_gift" href="javascript:;"><span class="hover_header">Gift</span></a></div><div class="nvbar_end"></div></div>',
-                html_alchemy = '<a id="uber_alchemy" href="javascript:;"><span class="hover_header">Alchemy</span></a>';
+                html_gift = '<div><div class="nvbar_start"></div><div class="nvbar_middle">' +
+                            '<a id="uber_gift" href="javascript:;"><span class="hover_header">' +
+                            'UGift</span></a></div><div class="nvbar_end"></div></div>',
+                html_alchemy = '<a id="uber_alchemy" href="javascript:;">' +
+                               '<span class="hover_header">UAlchemy</span></a>';
             $(loc).removeAttr("style");
             $(html_start).css({}).prependTo(loc.parent());
             $(html_alchemy).css({}).appendTo(loc);
