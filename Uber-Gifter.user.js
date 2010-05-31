@@ -4,7 +4,7 @@
 // @include        http://apps.facebook.com/castle_age/*
 // @exclude        *#iframe*
 // @require        http://jqueryjs.googlecode.com/files/jquery-1.3.2.min.js
-// @version        1.17.2
+// @version        1.17.3
 // @license        GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @compatability  Firefox 3.0+, Chrome 4+, Flock 2.0+
 // ==/UserScript==
@@ -13,7 +13,7 @@
 /*global $,GM_xmlhttpRequest,unsafeWindow,GM_registerMenuCommand */
 
 var Uber = {
-    version: '1.17.2',
+    version: '1.17.3',
 
     display: false,
 
@@ -49,7 +49,7 @@ var Uber = {
             inputID    = $("<input></input>"),
             buttonSub  = $("<button >GO!>"),
             gifts      = ['Random Soldier'],
-            freq       = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ,11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 25, 26, 27, 28, 29, 30];
+            freq       = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ,11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40];
 
         $.ajax({
             url: 'http://apps.facebook.com/castle_age/gift.php',
