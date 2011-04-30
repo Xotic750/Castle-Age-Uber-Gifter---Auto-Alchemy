@@ -1,10 +1,12 @@
 // ==UserScript==
 // @name           Castle Age Uber Gifter & Auto Alchemy
+// @icon           http://castle-age-uber-gifter-auto-alchemy.googlecode.com/files/48x48.png
 // @namespace      Gifter
+// @author         Xotic750
 // @include        http://apps.facebook.com/castle_age/*
 // @require        http://castle-age-uber-gifter-auto-alchemy.googlecode.com/files/jquery.js
-// @version        1.18.0
-// @license        GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
+// @version        1.18.1
+// @license        GPL version 3 or any later version (http://www.gnu.org/copyleft/gpl.html)
 // @compatability  Firefox 3.0+, Chrome 4+, Flock 2.0+
 // ==/UserScript==
 
@@ -41,7 +43,7 @@
     };
 
     var Uber = {
-        version: '1.18.0',
+        version: '1.18.1',
 
         display: false,
 
@@ -49,8 +51,20 @@
 
         send: function (uid, num, gift) {
             if (num && this.keepGoing) {
-                $.post("http://apps.facebook.com/castle_age/gift_accept.php?act=create&gift=" + gift, {'ids[]': uid}, function () {
-                    Uber.receive(uid, num, gift);
+                $.ajax({
+                    type: 'POST',
+                    url: "http://apps.facebook.com/castle_age/gift_accept.php?act=create&gift=" + gift,
+                    data: {'ids[]': uid},
+                    error:
+                        function (XMLHttpRequest, textStatus, errorThrown) {
+                            Uber.alert("Error sending last gift: " + textStatus);
+                            num -= 1;
+                            Uber.send(uid, num, gift);
+                        },
+                    success:
+                        function (data, textStatus, XMLHttpRequest) {
+                            Uber.receive(uid, num, gift);
+                        }
                 });
             } else if (!num) {
                 this.alert('All gifts have been delivered!!!');
@@ -60,13 +74,29 @@
 
         receive: function (uid, num, gift) {
             if (num) {
-                $.get("http://apps.facebook.com/castle_age/gift_accept.php?act=acpt&rqtp=gift&uid=" + uid, function () {
-                    num -= 1;
-                    if (Uber.display) {
-                        Uber.get_sub_panel('ca_gift').text(num + " gifts waiting for delivery...");
-                    }
+                $.ajax({
+                    type: 'POST',
+                    url: "http://apps.facebook.com/castle_age/gift_accept.php?act=acpt&rqtp=gift&uid=" + uid,
+                    data: {'ids[]': uid},
+                    error:
+                        function (XMLHttpRequest, textStatus, errorThrown) {
+                            Uber.alert("Error receiving last gift: " + textStatus);
+                            num -= 1;
+                            if (Uber.display) {
+                                Uber.get_sub_panel('ca_gift').text(num + " gifts waiting for delivery...");
+                            }
 
-                    Uber.send(uid, num, gift);
+                            Uber.send(uid, num, gift);
+                        },
+                    success:
+                        function (data, textStatus, XMLHttpRequest) {
+                            num -= 1;
+                            if (Uber.display) {
+                                Uber.get_sub_panel('ca_gift').text(num + " gifts waiting for delivery...");
+                            }
+
+                            Uber.send(uid, num, gift);
+                        }
                 });
             }
         },
@@ -162,7 +192,7 @@
                                 }
 
                                 if (!idOk) {
-                                    FBID = window.presence.user ? window.presence.user.parseInt() : undefined;
+                                    FBID = window.presence && window.presence.user ? window.presence.user.parseInt() : undefined;
                                     if (typeof FBID === 'number' && FBID > 0) {
                                         idOk = true;
                                     }
