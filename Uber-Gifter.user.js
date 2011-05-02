@@ -3,9 +3,10 @@
 // @icon           http://castle-age-uber-gifter-auto-alchemy.googlecode.com/files/48x48.png
 // @namespace      Gifter
 // @author         Xotic750
+// @description    Self gifting and alchemy combining for Castle Age
 // @include        http://apps.facebook.com/castle_age/*
 // @require        http://castle-age-uber-gifter-auto-alchemy.googlecode.com/files/jquery.js
-// @version        1.18.1
+// @version        1.18.2
 // @license        GPL version 3 or any later version (http://www.gnu.org/copyleft/gpl.html)
 // @compatability  Firefox 3.0+, Chrome 4+, Flock 2.0+
 // ==/UserScript==
@@ -43,7 +44,7 @@
     };
 
     var Uber = {
-        version: '1.18.1',
+        version: '1.18.2',
 
         display: false,
 
@@ -180,22 +181,11 @@
                                 }
                             }
 
-                            if (!idOk) {
-                                accountEl = $('script', data);
-                                if (accountEl.length) {
-                                    FBID = accountEl.text();
-                                    FBID = FBID ? FBID.match(new RegExp('[\\s"]*?user[\\s"]*?:(\\d+),', 'i')) : undefined;
-                                    FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
-                                    if (typeof FBID === 'number' && FBID > 0) {
-                                        idOk = true;
-                                    }
-                                }
-
-                                if (!idOk) {
-                                    FBID = window.presence && window.presence.user ? window.presence.user.parseInt() : undefined;
-                                    if (typeof FBID === 'number' && FBID > 0) {
-                                        idOk = true;
-                                    }
+                            if (!idOk && data) {
+                                FBID = data.match(new RegExp('[\\s"]*?user[\\s"]*?:(\\d+),', 'i'));
+                                FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
+                                if (typeof FBID === 'number' && FBID > 0) {
+                                    idOk = true;
                                 }
                             }
 
