@@ -1,18 +1,21 @@
 // ==UserScript==
 // @name           Castle Age Uber Gifter & Auto Alchemy
-// @icon           http://castle-age-uber-gifter-auto-alchemy.googlecode.com/files/48x48.png
+// @icon           https://castle-age-uber-gifter-auto-alchemy.googlecode.com/files/48x48.png
 // @namespace      Gifter
 // @author         Xotic750
 // @description    Self gifting and alchemy combining for Castle Age
 // @include        http://apps.facebook.com/castle_age/*
-// @require        http://castle-age-uber-gifter-auto-alchemy.googlecode.com/files/jquery.js
-// @version        1.18.2
+// @include        https://apps.facebook.com/castle_age/*
+// @include        http://web3.castleagegame.com/castle_ws/*
+// @include        https://web3.castleagegame.com/castle_ws/*
+// @require        https://ajax.googleapis.com/ajax/libs/jquery/1.6/jquery.min.js
+// @version        1.19.0
 // @license        GPL version 3 or any later version (http://www.gnu.org/copyleft/gpl.html)
 // @compatability  Firefox 3.0+, Chrome 4+, Flock 2.0+
 // ==/UserScript==
 
 /*jslint white: true, browser: true, devel: true, undef: true, nomen: true, bitwise: true, immed: true, regexp: true */
-/*global window,$,GM_xmlhttpRequest,unsafeWindow,GM_registerMenuCommand */
+/*global window,GM_xmlhttpRequest,GM_setValue,GM_getValue,unsafeWindow,GM_registerMenuCommand */
 
 (function () {
     String.prototype.uniConv = function () {
@@ -44,17 +47,29 @@
     };
 
     var Uber = {
-        version: '1.18.2',
+        version: '1.19.0',
+
+        $ju: null,
+
+        isFb: true,
+
+        fbappid: '',
 
         display: false,
 
         keepGoing: true,
 
+        log: function log(msg) {
+            if (window.console && typeof console.log === 'function') {
+                console.log('UG:' + Uber.version + ' |' + (new Date()).toLocaleTimeString() + '| ' + msg);
+            }
+        },
+
         send: function (uid, num, gift) {
-            if (num && this.keepGoing) {
-                $.ajax({
+            if (num && Uber.keepGoing) {
+                Uber.$ju.ajax({
                     type: 'POST',
-                    url: "http://apps.facebook.com/castle_age/gift_accept.php?act=create&gift=" + gift,
+                    url: "gift_accept.php?act=create&gift=" + gift,
                     data: {'ids[]': uid},
                     error:
                         function (XMLHttpRequest, textStatus, errorThrown) {
@@ -68,35 +83,34 @@
                         }
                 });
             } else if (!num) {
-                this.alert('All gifts have been delivered!!!');
-                this.remove_sub_panel('ca_gift');
+                Uber.alert('All gifts have been delivered!!!');
+                Uber.remove_sub_panel('ca_gift');
             }
         },
 
         receive: function (uid, num, gift) {
+            function waiting() {
+                num -= 1;
+                if (Uber.display) {
+                    Uber.get_sub_panel('ca_gift').text(num + " gifts waiting for delivery...");
+                }
+
+                Uber.send(uid, num, gift);
+            }
+
             if (num) {
-                $.ajax({
+                Uber.$ju.ajax({
                     type: 'POST',
-                    url: "http://apps.facebook.com/castle_age/gift_accept.php?act=acpt&rqtp=gift&uid=" + uid,
+                    url: "gift_accept.php?act=acpt&rqtp=gift&uid=" + uid,
                     data: {'ids[]': uid},
                     error:
                         function (XMLHttpRequest, textStatus, errorThrown) {
                             Uber.alert("Error receiving last gift: " + textStatus);
-                            num -= 1;
-                            if (Uber.display) {
-                                Uber.get_sub_panel('ca_gift').text(num + " gifts waiting for delivery...");
-                            }
-
-                            Uber.send(uid, num, gift);
+                            waiting();
                         },
                     success:
                         function (data, textStatus, XMLHttpRequest) {
-                            num -= 1;
-                            if (Uber.display) {
-                                Uber.get_sub_panel('ca_gift').text(num + " gifts waiting for delivery...");
-                            }
-
-                            Uber.send(uid, num, gift);
+                            waiting();
                         }
                 });
             }
@@ -104,15 +118,16 @@
 
         gift: function () {
             var ca_gift    = Uber.get_sub_panel('ca_gift'),
-                selectGift = $("<select></select>"),
-                selectFreq = $("<select></select>"),
-                buttonSub  = $("<button >GO!>"),
+                selectGift = Uber.$ju("<select></select>"),
+                selectFreq = Uber.$ju("<select></select>"),
+                buttonSub  = Uber.$ju("<button >GO!>"),
                 gifts      = ['Random Soldier'],
-                freq       = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
-                nameCnt    = {};
+                maxFreq    = 40,
+                nameCnt    = {},
+                it         = 0;
 
-            $.ajax({
-                url: 'http://apps.facebook.com/castle_age/gift.php',
+            Uber.$ju.ajax({
+                url: 'gift.php',
                 async: false,
                 error:
                     function (XMLHttpRequest, textStatus, errorThrown) {
@@ -120,25 +135,14 @@
                     },
                 success:
                     function (data, textStatus, XMLHttpRequest) {
-                        data = data.unescapeCAHTML().split('<div style="clear: both;"></div>');
-                        var j = -1;
-                        for (var i = 0; i < data.length; i += 1) {
-                            if (/app46755028429_gift1/.test(data[i])) {
-                                j = i;
-                                break;
-                            }
-                        }
-
-                        if (j === -1) {
+                        data = Uber.isFb ? data.unescapeCAHTML() : data;
+                        var giftDiv = Uber.$ju("#" + Uber.fbappid + "giftContainer div[id^='" + Uber.fbappid + "gift']", data);
+                        if (!giftDiv.length) {
                             Uber.alert("Could not find gift list");
                         } else {
-                            $('<div></div>').html(data[j]).find('div[id^="app46755028429_gift"]').each(function (index) {
-                                var giftName = $.trim($(this).children().eq(0).html()).replace(/!/i, '');
-
-                                if (!nameCnt[giftName]) {
-                                    nameCnt[giftName] = 1;
-                                }
-
+                            giftDiv.each(function (index) {
+                                var giftName = Uber.$ju(this).text().trim().replace(/!/i, '');
+                                nameCnt[giftName] = nameCnt[giftName] ? nameCnt[giftName] : 1;
                                 if (gifts.indexOf(giftName) >= 0) {
                                     nameCnt[giftName] += 1;
                                     giftName += ' #' + nameCnt[giftName];
@@ -150,16 +154,16 @@
                     }
             });
 
-            $.each(gifts, function (idx) {
-                selectGift.append("<option value='" + idx + "'>" + this + "</option");
-            });
+            for (it = 0; it < gifts.length; it += 1) {
+                selectGift.append("<option value='" + it + "'>" + gifts[it] + "</option");
+            }
 
-            $.each(freq, function () {
-                selectFreq.append("<option value='" + this + "'>" + this + "</option>");
-            });
+            for (it = 1; it <= maxFreq; it += 1) {
+                selectFreq.append("<option value='" + it + "'>" + it + "</option>");
+            }
 
             buttonSub.click(function () {
-                $.ajax({
+                Uber.$ju.ajax({
                     url: 'index.php',
                     error:
                         function (XMLHttpRequest, textStatus, errorThrown) {
@@ -167,22 +171,32 @@
                         },
                     success:
                         function (data, textStatus, XMLHttpRequest) {
-                            data = data.unescapeCAHTML();
-                            var accountEl = $('#navAccountName', data),
+                            data = Uber.isFb ? data.unescapeCAHTML() : data;
+                            var accountEl = Uber.$ju('#navAccountName', data),
                                 idOk      = false,
                                 FBID;
 
-                            if (accountEl.length) {
-                                FBID = accountEl.attr('href');
-                                FBID = FBID ? FBID.match(/id=(\d+)/i) : undefined;
-                                FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
-                                if (typeof FBID === 'number' && FBID > 0) {
-                                    idOk = true;
+                            if (Uber.isFb) {
+                                if (accountEl.length) {
+                                    FBID = accountEl.attr('href');
+                                    FBID = FBID ? FBID.match(/id=(\d+)/i) : undefined;
+                                    FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
+                                    if (typeof FBID === 'number' && FBID > 0) {
+                                        idOk = true;
+                                    }
                                 }
-                            }
 
-                            if (!idOk && data) {
-                                FBID = data.match(new RegExp('[\\s"]*?user[\\s"]*?:(\\d+),', 'i'));
+                                if (!idOk && data) {
+                                    FBID = data.match(new RegExp('[\\s"]*?user[\\s"]*?:(\\d+),', 'i'));
+                                    FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
+                                    if (typeof FBID === 'number' && FBID > 0) {
+                                        idOk = true;
+                                    }
+                                }
+                            } else {
+                                accountEl = Uber.$ju("img[src*='graph.facebook.com']");
+                                FBID = accountEl.attr('src');
+                                FBID = FBID ? FBID.match(new RegExp("facebook.com\\/(\\d+)\\/")) : undefined;
                                 FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
                                 if (typeof FBID === 'number' && FBID > 0) {
                                     idOk = true;
@@ -190,7 +204,7 @@
                             }
 
                             if (idOk) {
-                                Uber.send(FBID, selectFreq.val(), $(":selected", selectGift).attr("value"));
+                                Uber.send(FBID, selectFreq.val(), Uber.$ju(":selected", selectGift).attr("value"));
                                 ca_gift.html("Preparing gifts...");
                                 Uber.display = true;
                             } else {
@@ -215,11 +229,11 @@
                     data[this.name] = this.value;
                 });
 
-                if (this.display) {
-                    this.get_sub_panel('ca_alch').text(num + " items remaining...");
+                if (Uber.display) {
+                    Uber.get_sub_panel('ca_alch').text(num + " items remaining...");
                 }
 
-                $.ajax({
+                Uber.$ju.ajax({
                     url: 'alchemy.php',
                     data: data,
                     error:
@@ -228,7 +242,7 @@
                         },
                     success:
                         function (data, textStatus, XMLHttpRequest) {
-                            var result = $('#app46755028429_results_main_wrapper div.results span.result_body, #' + id, data.unescapeCAHTML()),
+                            var result = Uber.$ju("#" + Uber.fbappid + "results_main_wrapper div.results span.result_body, #" + id, Uber.isFb ? data.unescapeCAHTML() : data),
                                 txt    = result.text().trim();
 
                             if (/You have created/.test(txt)) {
@@ -247,15 +261,15 @@
                         }
                 });
             } else {
-                this.alert('All items have been combined.');
-                this.remove_sub_panel('ca_alch');
+                Uber.alert('All items have been combined.');
+                Uber.remove_sub_panel('ca_alch');
             }
         },
 
         alchemy: function () {
             var ca_alch = Uber.get_sub_panel('ca_alch');
 
-            $.ajax({
+            Uber.$ju.ajax({
                 url: 'alchemy.php',
                 error:
                     function (XMLHttpRequest, textStatus, errorThrown) {
@@ -263,23 +277,23 @@
                     },
                 success:
                     function (data, textStatus, XMLHttpRequest) {
-                        var divs       = $('#app46755028429_recipe_list div.statsT2 table div.alchemyRecipeBack', data.unescapeCAHTML()),
-                            selectReci = $("<select></select>"),
-                            selectFreq = $("<select></select>"),
-                            buttonSub  = $("<button>Combine</button>"),
+                        var divs       = Uber.$ju("#" + Uber.fbappid + "recipe_list div.statsT2 table div.alchemyRecipeBack", Uber.isFb ? data.unescapeCAHTML() : data),
+                            selectReci = Uber.$ju("<select></select>"),
+                            selectFreq = Uber.$ju("<select></select>"),
+                            buttonSub  = Uber.$ju("<button>Combine</button>"),
                             freq       = [1, 2, 3, 4, 5, 10, 20, 50, 100, 200, 500];
 
                         divs.children().each(function () {
-                            var el = $(this);
-                            selectReci.append("<option value='" + $("form", el).attr("id") + "'>" + $("div.recipeTitle", el).text().trim().replace(/RECIPES: Create | to join your army!/g, '') + "</option>");
+                            var el = Uber.$ju(this);
+                            selectReci.append("<option value='" + Uber.$ju("form", el).attr("id") + "'>" + Uber.$ju("div.recipeTitle", el).text().trim().replace(/RECIPES: Create | to join your army!/g, '') + "</option>");
                         });
 
-                        $.each(freq, function () {
+                        Uber.$ju.each(freq, function () {
                             selectFreq.append("<option value='" + this + "'>" + this + "</option>");
                         });
 
                         buttonSub.click(function () {
-                            Uber.do_alch($("#" + $(":selected", selectReci).attr("value"), divs), selectFreq.val());
+                            Uber.do_alch(Uber.$ju("#" + Uber.$ju(":selected", selectReci).attr("value"), divs), selectFreq.val());
                             ca_alch.html("Preparing to combine items...You will be notified upon completion.");
                             Uber.display = true;
                         });
@@ -291,16 +305,18 @@
         },
 
         get_panel: function () {
-            var ca_panel = $("#ca_panel");
+            var ca_panel = Uber.$ju("#ca_panel");
             if (!ca_panel.size()) {
-                ca_panel = $("<div id='ca_panel'></div>").css({
-                    position : 'absolute',
-                    top      : $("#app46755028429_main_bn").offset().top + 10 + 'px',
-                    left     : $("#app46755028429_main_bn").offset().left + 'px',
-                    padding  : '5px',
-                    border   : 'solid 1px black',
-                    background : 'white',
-                    zIndex: '4'
+                ca_panel = Uber.$ju("<div id='ca_panel'></div>").css({
+                    'font-family': "'Lucida Grande', tahoma, verdana, arial, sans-serif",
+                    'font-size'  : '10px',
+                    position     : 'absolute',
+                    top          : Uber.$ju("#" + Uber.fbappid + "main_bn").offset().top + 10 + 'px',
+                    left         : Uber.$ju("#" + Uber.fbappid + "main_bn").offset().left + 'px',
+                    padding      : '5px',
+                    border       : 'solid 1px black',
+                    background   : 'white',
+                    zIndex       : '4'
                 });
 
                 ca_panel.appendTo(document.body);
@@ -310,122 +326,172 @@
         },
 
         remove_panel: function () {
-            var ca_panel = this.get_panel();
+            var ca_panel = Uber.get_panel();
             if (!ca_panel.children().size()) {
                 ca_panel.remove();
             }
         },
 
         get_sub_panel: function (id) {
-            var ca_sub_panel = $("#" + id);
+            var ca_sub_panel = Uber.$ju("#" + id);
             if (!ca_sub_panel.size()) {
-                ca_sub_panel = $("<div id='" + id + "'>loading...please wait~</div>").css({
-                    height   : '60px',
-                    width    : '300px',
-                    padding  : '5px',
-                    border   : 'solid 1px black',
-                    background : 'white'
+                ca_sub_panel = Uber.$ju("<div id='" + id + "'>loading...please wait~</div>").css({
+                    'font-family': "'Lucida Grande', tahoma, verdana, arial, sans-serif",
+                    'font-size'  : '10px',
+                    height       : '60px',
+                    width        : '300px',
+                    padding      : '5px',
+                    border       : 'solid 1px black',
+                    background   : 'white'
                 });
 
-                this.get_panel().append(ca_sub_panel);
+                Uber.get_panel().append(ca_sub_panel);
             }
 
             return ca_sub_panel;
         },
 
         remove_sub_panel: function (id) {
-            var ca_sub_panel = this.get_sub_panel(id);
+            var ca_sub_panel = Uber.get_sub_panel(id);
             ca_sub_panel.remove();
-            this.remove_panel();
+            Uber.remove_panel();
         },
 
         check_update: function (currentVersion) {
-            /*jslint newcap: false */
-            GM_xmlhttpRequest({
-            /*jslint newcap: true */
-                method: 'GET',
-                url: 'http://castle-age-uber-gifter-auto-alchemy.googlecode.com/svn/trunk/Uber-Gifter.user.js',
-                headers: {'Cache-Control': 'no-cache'},
-                onload: function (resp) {
-                    var rt = resp.responseText,
-                        remote_version = new RegExp("@version\\s*(.*?)\\s*$", "m").exec(rt)[1],
-                        script_name = (new RegExp("@name\\s*(.*?)\\s*$", "m").exec(rt))[1];
-                    if (remote_version > currentVersion) {
-                        if (confirm("There is a newer version of " + script_name + " available.  Would you like to update?")) {
-                            setTimeout(function () {
-                                unsafeWindow.location.href = "http://castle-age-uber-gifter-auto-alchemy.googlecode.com/svn/trunk/Uber-Gifter.user.js";
-                            }, 3000);
+            var now = new Date().getTime(),
+                /*jslint newcap: false */
+                check = GM_getValue("uberUpdateLC");
+                /*jslint newcap: true */
+
+            check = (check ? parseInt(check, 10) : 0) + 86400000;
+            if (check < now) {
+                /*jslint newcap: false */
+                GM_xmlhttpRequest({
+                /*jslint newcap: true */
+                    method: 'GET',
+                    url: 'https://castle-age-uber-gifter-auto-alchemy.googlecode.com/files/Uber-Gifter.user.js',
+                    headers: {'Cache-Control': 'no-cache'},
+                    onload: function (resp) {
+                        var rt = resp.responseText,
+                            remote_version = (new RegExp("@version\\s*(.*?)\\s*$", "m").exec(rt))[1],
+                            script_name = (new RegExp("@name\\s*(.*?)\\s*$", "m").exec(rt))[1];
+
+                        if (remote_version > currentVersion) {
+                            if (confirm("There is a newer version of " + script_name + " available.  Would you like to update?")) {
+                                setTimeout(function () {
+                                    unsafeWindow.location.href = "https://castle-age-uber-gifter-auto-alchemy.googlecode.com/files/Uber-Gifter.user.js";
+                                }, 3000);
+                            }
                         }
+
+                        /*jslint newcap: false */
+                        GM_setValue("uberUpdateLC", '' + now);
+                        /*jslint newcap: true */
                     }
-                }
-            });
+                });
+            }
         },
 
         put_link: function () {
-            var loc = $("#app46755028429_nvbar_nvl").find(".nvbar_middle:first");
-            if (loc.length && !$("#uber_gifter").length) {
+            var loc = Uber.$ju("#" + Uber.fbappid + "nvbar_nvl").find(".nvbar_middle:first");
+            if (loc.length && !Uber.$ju("#uber_gifter").length) {
                 var html_start = '<div id="uber_gifter" class="nvbar_start"></div>',
                     html_gift = '<div><div class="nvbar_start"></div><div class="nvbar_middle">' +
-                                '<a id="uber_gift" href="javascript:;"><span class="hover_header">' +
+                                '<a id="uber_gift" href="#"><span class="hover_header">' +
                                 'UG</span></a></div><div class="nvbar_end"></div></div>',
-                    html_alchemy = '<a id="uber_alchemy" href="javascript:;">' +
+                    html_alchemy = '<a id="uber_alchemy" href="#">' +
                                    '<span class="hover_header">UA</span></a>';
-                $(loc).removeAttr("style");
-                $(html_start).css({}).prependTo(loc.parent());
-                $(html_alchemy).css({}).appendTo(loc);
-                $(html_gift).css({}).prependTo(loc.parent().parent());
-                $("#uber_gift").bind('click', Uber.gift);
-                $("#uber_alchemy").bind('click', Uber.alchemy);
+                Uber.$ju(loc).removeAttr("style");
+                Uber.$ju(html_start).css({}).prependTo(loc.parent());
+                Uber.$ju(html_alchemy).css({}).appendTo(loc);
+                Uber.$ju(html_gift).css({}).prependTo(loc.parent().parent());
+                Uber.$ju("#uber_gift").bind('click', Uber.gift);
+                Uber.$ju("#uber_alchemy").bind('click', Uber.alchemy);
             }
         },
 
         alert: function (message) {
-            var alert_panel = $("#uber_alert_panel");
+            var alert_panel = Uber.$ju("#uber_alert_panel");
             if (!alert_panel.size()) {
-                alert_panel = $("<div id='uber_alert_panel'><br />" + message +
+                alert_panel = Uber.$ju("<div id='uber_alert_panel'><br />" + message +
                                 "<br /><br /><br /><div><button id='uber_alert_ok'>ok</button></div></div>").css({
-                    position   : 'fixed',
-                    top        : (window.innerHeight / 2) + 'px',
-                    left       : $("#app46755028429_main_bn").offset().left + 300 + 'px',
-                    height     : '100px',
-                    width      : '300px',
-                    padding    : '5px',
-                    border     : 'solid 1px black',
-                    background : 'white',
-                    textAlign  : 'center',
-                    zIndex     : '5'
+                    'font-family': "'Lucida Grande', tahoma, verdana, arial, sans-serif",
+                    'font-size'  : '10px',
+                    position     : 'fixed',
+                    top          : (window.innerHeight / 2) + 'px',
+                    left         : Uber.$ju("#" + Uber.fbappid + "main_bn").offset().left + 300 + 'px',
+                    height       : '100px',
+                    width        : '300px',
+                    padding      : '5px',
+                    border       : 'solid 1px black',
+                    background   : 'white',
+                    textAlign    : 'center',
+                    zIndex       : '5'
                 });
 
                 alert_panel.appendTo(document.body);
 
-                $("#uber_alert_ok").click(function () {
-                    $("#uber_alert_panel").remove();
+                Uber.$ju("#uber_alert_ok").click(function () {
+                    Uber.$ju("#uber_alert_panel").remove();
                 });
             }
         },
 
+        injectScript: function (url) {
+            var inject = document.createElement('script');
+            inject.setAttribute('type', 'text/javascript');
+            inject.setAttribute('src', url);
+            (document.head || document.getElementsByTagName('head')[0]).appendChild(inject);
+        },
+
+        waitForjQuery: function () {
+            if (window.jQuery && window.jQuery().jquery === "1.6") {
+                Uber.log("jQuery ready ...");
+                if (!Uber.$ju) {
+                    Uber.$ju = window.jQuery.noConflict();
+                } else {
+                    throw "Uber.$ju is already in use!";
+                }
+
+                Uber.$ju(function () {
+                    Uber.isFb = window.location.href.indexOf('apps.facebook.com/castle_age/') >= 0;
+                    Uber.fbappid = Uber.isFb ? 'app46755028429_' : '';
+                    Uber.init_chrome();
+                    if (window.navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 ? true : false) {
+                        Uber.init_firefox();
+                    }
+                }).ready();
+            } else {
+                Uber.log("Waiting for jQuery ...");
+                window.setTimeout(Uber.waitForjQuery, 100);
+            }
+        },
+
+        init: function () {
+            if (!window.jQuery || window.jQuery().jquery !== "1.6") {
+                Uber.log("Inject jQuery");
+                Uber.injectScript("https://ajax.googleapis.com/ajax/libs/jquery/1.6/jquery.min.js");
+            }
+
+            Uber.waitForjQuery();
+        },
+
         init_chrome: function () {
-            this.put_link();
-            var globalCont = $("#app46755028429_globalContainer");
+            Uber.put_link();
+            var globalCont = Uber.$ju("#" + Uber.fbappid + "globalContainer");
             if (globalCont.length) {
-                globalCont.bind('DOMNodeInserted', this.put_link);
+                globalCont.bind('DOMNodeInserted', Uber.put_link);
             }
         },
 
         init_firefox: function () {
-            this.check_update(this.version);
+            Uber.check_update(Uber.version);
             /*jslint newcap: false */
-            GM_registerMenuCommand("CA - Uber Gifter", this.gift);
-            GM_registerMenuCommand("CA - Auto Alchemy", this.alchemy);
+            GM_registerMenuCommand("CA - Uber Gifter", Uber.gift);
+            GM_registerMenuCommand("CA - Auto Alchemy", Uber.alchemy);
             /*jslint newcap: true */
         }
     };
 
-    $(function () {
-        if (navigator.userAgent.toLowerCase().indexOf('chrome') !== -1 ? true : false) {
-            Uber.init_chrome();
-        } else {
-            Uber.init_firefox();
-        }
-    });
+    Uber.init();
 }());
