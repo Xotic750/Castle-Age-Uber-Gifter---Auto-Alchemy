@@ -9,7 +9,7 @@
 // @include        http://web3.castleagegame.com/castle_ws/*
 // @include        https://web3.castleagegame.com/castle_ws/*
 // @require        https://ajax.googleapis.com/ajax/libs/jquery/1.6/jquery.min.js
-// @version        1.19.0
+// @version        2.0.0
 // @license        GPL version 3 or any later version (http://www.gnu.org/copyleft/gpl.html)
 // @compatability  Firefox 3.0+, Chrome 4+, Flock 2.0+
 // ==/UserScript==
@@ -18,42 +18,20 @@
 /*global window,GM_xmlhttpRequest,GM_setValue,GM_getValue,unsafeWindow,GM_registerMenuCommand */
 
 (function () {
-    String.prototype.uniConv = function () {
-        return this.replace(/\\u([0-9a-f]{4})/gmi, function ($1, $2) {
-            return String.fromCharCode(parseInt($2, 16));
-        });
-    };
-
-    String.prototype.unescapeDouble = function () {
-        var meta = {
-                "t": "\t",
-                "n": "\n",
-                "r": "\r",
-                "f": "\f",
-                "b": "\b",
-                '"': '"',
-                "'": "'",
-                "/": "/"
-            };
-
-        return this.replace(new RegExp("\\\\(.)", "gm"), function ($1, $2) {
-            var chr = meta[$2];
-            return chr;
-        });
-    };
-
-    String.prototype.unescapeCAHTML = function () {
-        return this.uniConv().unescapeDouble();
-    };
-
     var Uber = {
-        version: '1.19.0',
+        version: '2.0.0',
 
         $ju: null,
 
         isFb: true,
 
+        fbid: 0,
+
         fbappid: '',
+
+        fbappjsid: '',
+
+        gifts: [],
 
         display: false,
 
@@ -63,6 +41,11 @@
             if (window.console && typeof console.log === 'function') {
                 console.log('UG:' + Uber.version + ' |' + (new Date()).toLocaleTimeString() + '| ' + msg);
             }
+        },
+
+        clickAjaxLinkSend: function (link) {
+            var jss = "javascript";
+            window.location.href = jss + ":void(" + Uber.fbappjsid + "ajaxLinkSend('globalContainer', '" + link + "'))";
         },
 
         send: function (uid, num, gift) {
@@ -85,6 +68,7 @@
             } else if (!num) {
                 Uber.alert('All gifts have been delivered!!!');
                 Uber.remove_sub_panel('ca_gift');
+                Uber.initGift = false;
             }
         },
 
@@ -116,46 +100,23 @@
             }
         },
 
+        initGift: false,
+
         gift: function () {
+            Uber.initGift = true;
+            Uber.clickAjaxLinkSend("gift.php");
+        },
+
+        runGift: function () {
             var ca_gift    = Uber.get_sub_panel('ca_gift'),
                 selectGift = Uber.$ju("<select></select>"),
                 selectFreq = Uber.$ju("<select></select>"),
                 buttonSub  = Uber.$ju("<button >GO!>"),
-                gifts      = ['Random Soldier'],
                 maxFreq    = 40,
-                nameCnt    = {},
                 it         = 0;
 
-            Uber.$ju.ajax({
-                url: 'gift.php',
-                async: false,
-                error:
-                    function (XMLHttpRequest, textStatus, errorThrown) {
-                        Uber.alert("Unable to get gift list: " + textStatus);
-                    },
-                success:
-                    function (data, textStatus, XMLHttpRequest) {
-                        data = Uber.isFb ? data.unescapeCAHTML() : data;
-                        var giftDiv = Uber.$ju("#" + Uber.fbappid + "giftContainer div[id^='" + Uber.fbappid + "gift']", data);
-                        if (!giftDiv.length) {
-                            Uber.alert("Could not find gift list");
-                        } else {
-                            giftDiv.each(function (index) {
-                                var giftName = Uber.$ju(this).text().trim().replace(/!/i, '');
-                                nameCnt[giftName] = nameCnt[giftName] ? nameCnt[giftName] : 1;
-                                if (gifts.indexOf(giftName) >= 0) {
-                                    nameCnt[giftName] += 1;
-                                    giftName += ' #' + nameCnt[giftName];
-                                }
-
-                                gifts.push(giftName);
-                            });
-                        }
-                    }
-            });
-
-            for (it = 0; it < gifts.length; it += 1) {
-                selectGift.append("<option value='" + it + "'>" + gifts[it] + "</option");
+            for (it = 0; it < Uber.gifts.length; it += 1) {
+                selectGift.append("<option value='" + it + "'>" + Uber.gifts[it] + "</option");
             }
 
             for (it = 1; it <= maxFreq; it += 1) {
@@ -163,56 +124,14 @@
             }
 
             buttonSub.click(function () {
-                Uber.$ju.ajax({
-                    url: 'index.php',
-                    error:
-                        function (XMLHttpRequest, textStatus, errorThrown) {
-                            Uber.alert("Unable to do alchemy: " + textStatus);
-                        },
-                    success:
-                        function (data, textStatus, XMLHttpRequest) {
-                            data = Uber.isFb ? data.unescapeCAHTML() : data;
-                            var accountEl = Uber.$ju('#navAccountName', data),
-                                idOk      = false,
-                                FBID;
-
-                            if (Uber.isFb) {
-                                if (accountEl.length) {
-                                    FBID = accountEl.attr('href');
-                                    FBID = FBID ? FBID.match(/id=(\d+)/i) : undefined;
-                                    FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
-                                    if (typeof FBID === 'number' && FBID > 0) {
-                                        idOk = true;
-                                    }
-                                }
-
-                                if (!idOk && data) {
-                                    FBID = data.match(new RegExp('[\\s"]*?user[\\s"]*?:(\\d+),', 'i'));
-                                    FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
-                                    if (typeof FBID === 'number' && FBID > 0) {
-                                        idOk = true;
-                                    }
-                                }
-                            } else {
-                                accountEl = Uber.$ju("img[src*='graph.facebook.com']");
-                                FBID = accountEl.attr('src');
-                                FBID = FBID ? FBID.match(new RegExp("facebook.com\\/(\\d+)\\/")) : undefined;
-                                FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
-                                if (typeof FBID === 'number' && FBID > 0) {
-                                    idOk = true;
-                                }
-                            }
-
-                            if (idOk) {
-                                Uber.send(FBID, selectFreq.val(), Uber.$ju(":selected", selectGift).attr("value"));
-                                ca_gift.html("Preparing gifts...");
-                                Uber.display = true;
-                            } else {
-                                Uber.alert("Cannot find your user ID.  CA servers are possibly busy.  Please try again later.");
-                                Uber.remove_sub_panel('ca_gift');
-                            }
-                        }
-                });
+                if (Uber.fbid) {
+                    Uber.send(Uber.fbid, selectFreq.val(), Uber.$ju(":selected", selectGift).attr("value"));
+                    ca_gift.html("Preparing gifts...");
+                    Uber.display = true;
+                } else {
+                    Uber.alert("Cannot find your user ID.  CA servers are possibly busy.  Please try again later.");
+                    Uber.remove_sub_panel('ca_gift');
+                }
             });
 
             ca_gift.html("Select gift and amount...<br/>");
@@ -220,88 +139,67 @@
 
         },
 
-        do_alch: function (form, num) {
-            if (num > 0 && form.size()) {
-                var data = {},
-                    id = form.attr("id");
+        waitingAlchemy: false,
 
-                form.children("input").each(function () {
-                    data[this.name] = this.value;
-                });
-
+        do_alch: function () {
+            if (Uber.alchemyCount > 0 && Uber.alchemyID) {
                 if (Uber.display) {
-                    Uber.get_sub_panel('ca_alch').text(num + " items remaining...");
+                    Uber.get_sub_panel('ca_alch').text(Uber.alchemyCount + " items remaining...");
                 }
 
-                Uber.$ju.ajax({
-                    url: 'alchemy.php',
-                    data: data,
-                    error:
-                        function (XMLHttpRequest, textStatus, errorThrown) {
-                            Uber.alert("Unable to do alchemy: " + textStatus);
-                        },
-                    success:
-                        function (data, textStatus, XMLHttpRequest) {
-                            var result = Uber.$ju("#" + Uber.fbappid + "results_main_wrapper div.results span.result_body, #" + id, Uber.isFb ? data.unescapeCAHTML() : data),
-                                txt    = result.text().trim();
-
-                            if (/You have created/.test(txt)) {
-                                setTimeout(function () {
-                                    num -= 1;
-                                    Uber.do_alch(form, num);
-                                }, 3000);
-                            } else if (txt === '') {
-                                setTimeout(function () {
-                                    Uber.do_alch(form, num);
-                                }, 3000);
-                            } else {
-                                Uber.alert('All items could not be combined.  You do not have sufficient materials to combine ' + num + ' itmes.');
-                                Uber.remove_sub_panel('ca_alch');
-                            }
-                        }
-                });
+                Uber.waitingAlchemy = true;
+                Uber.clickAjaxLinkSend("alchemy.php?show_tab=1&action=perform_alchemy&alchemy_id=" + Uber.alchemyID);
             } else {
                 Uber.alert('All items have been combined.');
                 Uber.remove_sub_panel('ca_alch');
+                Uber.alchemyCount = null;
+                Uber.alchemyID = null;
+                Uber.waitingAlchemy = false;
+                Uber.initAlchemy = false;
+                Uber.divsAlchemy = null;
+                Uber.waitingAlchemy = false;
             }
         },
 
+        initAlchemy: false,
+
         alchemy: function () {
-            var ca_alch = Uber.get_sub_panel('ca_alch');
+            Uber.initAlchemy = true;
+            Uber.clickAjaxLinkSend("alchemy.php");
+        },
 
-            Uber.$ju.ajax({
-                url: 'alchemy.php',
-                error:
-                    function (XMLHttpRequest, textStatus, errorThrown) {
-                        Uber.alert("Unable to get alchemy list: " + textStatus);
-                    },
-                success:
-                    function (data, textStatus, XMLHttpRequest) {
-                        var divs       = Uber.$ju("#" + Uber.fbappid + "recipe_list div.statsT2 table div.alchemyRecipeBack", Uber.isFb ? data.unescapeCAHTML() : data),
-                            selectReci = Uber.$ju("<select></select>"),
-                            selectFreq = Uber.$ju("<select></select>"),
-                            buttonSub  = Uber.$ju("<button>Combine</button>"),
-                            freq       = [1, 2, 3, 4, 5, 10, 20, 50, 100, 200, 500];
+        divsAlchemy: null,
 
-                        divs.children().each(function () {
-                            var el = Uber.$ju(this);
-                            selectReci.append("<option value='" + Uber.$ju("form", el).attr("id") + "'>" + Uber.$ju("div.recipeTitle", el).text().trim().replace(/RECIPES: Create | to join your army!/g, '') + "</option>");
-                        });
+        alchemyID: null,
 
-                        Uber.$ju.each(freq, function () {
-                            selectFreq.append("<option value='" + this + "'>" + this + "</option>");
-                        });
+        alchemyCount: null,
 
-                        buttonSub.click(function () {
-                            Uber.do_alch(Uber.$ju("#" + Uber.$ju(":selected", selectReci).attr("value"), divs), selectFreq.val());
-                            ca_alch.html("Preparing to combine items...You will be notified upon completion.");
-                            Uber.display = true;
-                        });
+        runAlchemy: function () {
+            var ca_alch = Uber.get_sub_panel('ca_alch'),
+                selectReci = Uber.$ju("<select></select>"),
+                selectFreq = Uber.$ju("<select></select>"),
+                buttonSub  = Uber.$ju("<button>Combine</button>"),
+                freq       = [1, 2, 3, 4, 5, 10, 20, 50, 100, 200, 500];
 
-                        ca_alch.html("Choose your item and quantity from the menu.<br/>");
-                        ca_alch.append(selectReci, selectFreq, buttonSub);
-                    }
+            Uber.divsAlchemy.children().each(function () {
+                var el = Uber.$ju(this);
+                selectReci.append("<option value='" + Uber.$ju("form", el).attr("id") + "'>" + Uber.$ju("div.recipeTitle", el).text().trim().replace(/RECIPES: Create | to join your army!/g, '') + "</option>");
             });
+
+            Uber.$ju.each(freq, function () {
+                selectFreq.append("<option value='" + this + "'>" + this + "</option>");
+            });
+
+            buttonSub.click(function () {
+                Uber.alchemyID = Uber.$ju("#" + Uber.$ju(":selected", selectReci).attr("value") + " input[name='alchemy_id']", Uber.divsAlchemy).val();
+                Uber.alchemyCount = selectFreq.val();
+                Uber.do_alch();
+                ca_alch.html("Preparing to combine items...You will be notified upon completion.");
+                Uber.display = true;
+            });
+
+            ca_alch.html("Choose your item and quantity from the menu.<br/>");
+            ca_alch.append(selectReci, selectFreq, buttonSub);
         },
 
         get_panel: function () {
@@ -456,10 +354,115 @@
                 Uber.$ju(function () {
                     Uber.isFb = window.location.href.indexOf('apps.facebook.com/castle_age/') >= 0;
                     Uber.fbappid = Uber.isFb ? 'app46755028429_' : '';
+                    Uber.fbappjsid = Uber.isFb ? 'a46755028429_' : '';
                     Uber.init_chrome();
                     if (window.navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 ? true : false) {
                         Uber.init_firefox();
                     }
+
+                    Uber.$ju("#" + Uber.fbappid + "globalContainer").bind('DOMNodeInserted', function (event) {
+                        var target = event.target.id ? event.target.id.replace('app46755028429_', '') : '',
+                            nameCnt = {},
+                            image,
+                            accountEl,
+                            idOk,
+                            divs,
+                            FBID;
+
+                        if (target === "gift" || target === "alchemy") {
+                            image = Uber.$ju("img[src*='tab_gifts_on.gif']");
+                            if (image && image.length) {
+                                idOk = false;
+                                if (Uber.isFb) {
+                                    accountEl = Uber.$ju('#navAccountName');
+                                    if (accountEl.length) {
+                                        FBID = accountEl.attr('href');
+                                        FBID = FBID ? FBID.match(/id=(\d+)/i) : undefined;
+                                        FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
+                                        if (typeof FBID === 'number' && FBID > 0) {
+                                            idOk = true;
+                                        }
+                                    }
+
+                                    if (!idOk) {
+                                        FBID = Uber.$ju('script').text().match(new RegExp('[\\s"]*?user[\\s"]*?:(\\d+),', 'i'));
+                                        FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
+                                        if (typeof FBID === 'number' && FBID > 0) {
+                                            idOk = true;
+                                        }
+                                    }
+                                } else {
+                                    accountEl = Uber.$ju("img[src*='graph.facebook.com']");
+                                    FBID = accountEl.attr('src');
+                                    FBID = FBID ? FBID.match(new RegExp("facebook.com\\/(\\d+)\\/")) : undefined;
+                                    FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
+                                    if (typeof FBID === 'number' && FBID > 0) {
+                                        idOk = true;
+                                    }
+                                }
+
+                                if (idOk) {
+                                    Uber.fbid = FBID;
+                                    Uber.gifts = ['Random Soldier'];
+                                    divs = Uber.$ju("#" + Uber.fbappid + "giftContainer div[id^='" + Uber.fbappid + "gift']");
+                                    if (!divs || !divs.length) {
+                                        Uber.alert("Could not find gift list");
+                                    } else {
+                                        divs.each(function (index) {
+                                            var giftName = Uber.$ju(this).text().trim().replace(/!/i, '');
+                                            nameCnt[giftName] = nameCnt[giftName] ? nameCnt[giftName] : 1;
+                                            if (Uber.gifts.indexOf(giftName) >= 0) {
+                                                nameCnt[giftName] += 1;
+                                                giftName += ' #' + nameCnt[giftName];
+                                            }
+
+                                            Uber.gifts.push(giftName);
+                                        });
+
+                                        if (Uber.initGift) {
+                                            Uber.runGift();
+                                        }
+                                    }
+                                } else {
+                                    Uber.alert("Cannot find your user ID.  CA servers are possibly busy.  Please try again later.");
+                                }
+                            } else {
+                                image = Uber.$ju("img[src*='tab_alchemy_on.gif']");
+                                if (image && image.length) {
+                                    Uber.divsAlchemy = Uber.$ju("#" + Uber.fbappid + "recipe_list div.statsT2 table div.alchemyRecipeBack");
+
+                                    if (Uber.initAlchemy && !Uber.waitingAlchemy) {
+                                        Uber.runAlchemy();
+                                    }
+
+                                    if (Uber.waitingAlchemy) {
+                                        var result = Uber.$ju("#" + Uber.fbappid + "results_main_wrapper div.results span.result_body"),
+                                            txt    = result.text().trim();
+
+                                        if (/You have created/.test(txt)) {
+                                            setTimeout(function () {
+                                                Uber.alchemyCount -= 1;
+                                                Uber.do_alch();
+                                            }, 3000);
+                                        } else if (txt === '') {
+                                            setTimeout(function () {
+                                                Uber.do_alch();
+                                            }, 3000);
+                                        } else {
+                                            Uber.alert('All items could not be combined.  You do not have sufficient materials to combine ' + Uber.alchemyCount + ' itmes.');
+                                            Uber.remove_sub_panel('ca_alch');
+                                            Uber.alchemyCount = null;
+                                            Uber.alchemyID = null;
+                                            Uber.waitingAlchemy = false;
+                                            Uber.initAlchemy = false;
+                                            Uber.divsAlchemy = null;
+                                            Uber.waitingAlchemy = false;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
                 }).ready();
             } else {
                 Uber.log("Waiting for jQuery ...");

@@ -29,5 +29,5 @@
         "http://web3.castleagegame.com/castle_ws/*",
         "https://web3.castleagegame.com/castle_ws/*"
     ],
-    "version": "1.19.0"
+    "version": "2.0.0"
 }
