@@ -1,13 +1,13 @@
 {
     "content_scripts": [{
         "include_globs": [
-            "http://apps.facebook.com/castle_age/*",
-            "https://apps.facebook.com/castle_age/*",
+            "*http://web.castleagegame.com/castle/*",
+            "*https://web.castleagegame.com/castle/*",
             "http://web3.castleagegame.com/castle_ws/*",
             "https://web3.castleagegame.com/castle_ws/*"
         ],
         "js": [
-            "jquery-1.6.min.js",
+            "jquery-1.6.1.min.js",
             "Uber-Gifter.user.js"
         ],
         "matches": [
@@ -24,10 +24,10 @@
     "name": "Castle Age Uber Gifter & Auto Alchemy",
     "permissions": [
         "tabs",
-        "http://apps.facebook.com/castle_age/*",
-        "https://apps.facebook.com/castle_age/*",
+        "http://web.castleagegame.com/castle/*",
+        "https://web.castleagegame.com/castle/*",
         "http://web3.castleagegame.com/castle_ws/*",
         "https://web3.castleagegame.com/castle_ws/*"
     ],
-    "version": "2.0.0"
+    "version": "2.1.0"
 }

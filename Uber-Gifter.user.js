@@ -4,22 +4,22 @@
 // @namespace      Gifter
 // @author         Xotic750
 // @description    Self gifting and alchemy combining for Castle Age
-// @include        http://apps.facebook.com/castle_age/*
-// @include        https://apps.facebook.com/castle_age/*
+// @include        *http://web.castleagegame.com/castle/*
+// @include        *https://web.castleagegame.com/castle/*
 // @include        http://web3.castleagegame.com/castle_ws/*
 // @include        https://web3.castleagegame.com/castle_ws/*
-// @require        https://ajax.googleapis.com/ajax/libs/jquery/1.6/jquery.min.js
-// @version        2.0.0
+// @require        https://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js
+// @version        2.1.0
 // @license        GPL version 3 or any later version (http://www.gnu.org/copyleft/gpl.html)
 // @compatability  Firefox 3.0+, Chrome 4+, Flock 2.0+
 // ==/UserScript==
 
 /*jslint white: true, browser: true, devel: true, undef: true, nomen: true, bitwise: true, immed: true, regexp: true */
-/*global window,GM_xmlhttpRequest,GM_setValue,GM_getValue,unsafeWindow,GM_registerMenuCommand */
+/*global window,GM_xmlhttpRequest,GM_setValue,GM_getValue,unsafeWindow,GM_registerMenuCommand,sessionStorage */
 
-(function () {
+(function (window) {
     var Uber = {
-        version: '2.0.0',
+        version: '2.1.0',
 
         $ju: null,
 
@@ -343,7 +343,7 @@
         },
 
         waitForjQuery: function () {
-            if (window.jQuery && window.jQuery().jquery === "1.6") {
+            if (window.jQuery) {
                 Uber.log("jQuery ready ...");
                 if (!Uber.$ju) {
                     Uber.$ju = window.jQuery.noConflict();
@@ -352,9 +352,11 @@
                 }
 
                 Uber.$ju(function () {
-                    Uber.isFb = window.location.href.indexOf('apps.facebook.com/castle_age/') >= 0;
-                    Uber.fbappid = Uber.isFb ? 'app46755028429_' : '';
-                    Uber.fbappjsid = Uber.isFb ? 'a46755028429_' : '';
+                    Uber.isFb = window.location.href.indexOf('web.castleagegame.com/castle/') >= 0;
+                    //Uber.fbappid = Uber.isFb ? 'app46755028429_' : '';
+                    //Uber.fbappjsid = Uber.isFb ? 'a46755028429_' : '';
+                    Uber.fbappid = Uber.isFb ? '' : '';
+                    Uber.fbappjsid = Uber.isFb ? '' : '';
                     Uber.init_chrome();
                     if (window.navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 ? true : false) {
                         Uber.init_firefox();
@@ -373,32 +375,11 @@
                             image = Uber.$ju("img[src*='tab_gifts_on.gif']");
                             if (image && image.length) {
                                 idOk = false;
-                                if (Uber.isFb) {
-                                    accountEl = Uber.$ju('#navAccountName');
-                                    if (accountEl.length) {
-                                        FBID = accountEl.attr('href');
-                                        FBID = FBID ? FBID.match(/id=(\d+)/i) : undefined;
-                                        FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
-                                        if (typeof FBID === 'number' && FBID > 0) {
-                                            idOk = true;
-                                        }
-                                    }
-
-                                    if (!idOk) {
-                                        FBID = Uber.$ju('script').text().match(new RegExp('[\\s"]*?user[\\s"]*?:(\\d+),', 'i'));
-                                        FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
-                                        if (typeof FBID === 'number' && FBID > 0) {
-                                            idOk = true;
-                                        }
-                                    }
-                                } else {
-                                    accountEl = Uber.$ju("img[src*='graph.facebook.com']");
-                                    FBID = accountEl.attr('src');
-                                    FBID = FBID ? FBID.match(new RegExp("facebook.com\\/(\\d+)\\/")) : undefined;
-                                    FBID = FBID && FBID.length === 2 ? parseInt(FBID[1], 10) : undefined;
-                                    if (typeof FBID === 'number' && FBID > 0) {
-                                        idOk = true;
-                                    }
+                                Uber.getFBSession();
+                                FBID = parseInt(sessionStorage.getItem('UGFB_id'), 10);
+                                sessionStorage.removeItem('UGFB_id');
+                                if (typeof FBID === 'number' && FBID > 0) {
+                                    idOk = true;
                                 }
 
                                 if (idOk) {
@@ -470,10 +451,18 @@
             }
         },
 
+        getFBSession: function () {
+            var inject = document.createElement('script');
+            inject.setAttribute('type', 'text/javascript');
+            inject.textContent = "(function(){sessionStorage.setItem('UGFB_id',FB._session.uid)})();";
+            (document.head || document.getElementsByTagName('head')[0]).appendChild(inject);
+            (document.head || document.getElementsByTagName('head')[0]).removeChild(inject);
+        },
+
         init: function () {
-            if (!window.jQuery || window.jQuery().jquery !== "1.6") {
+            if (!window.jQuery) {
                 Uber.log("Inject jQuery");
-                Uber.injectScript("https://ajax.googleapis.com/ajax/libs/jquery/1.6/jquery.min.js");
+                Uber.injectScript("https://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js");
             }
 
             Uber.waitForjQuery();
@@ -496,5 +485,6 @@
         }
     };
 
+    sessionStorage.removeItem('UGFB_id');
     Uber.init();
-}());
+}(window));
